@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUsersDto } from './dto/create-users.dto';
-import { UpdateUsersDto } from './dto/update-users.dto';
 import { Users } from './entities/users.entity';
 
 @Injectable()
@@ -27,11 +26,19 @@ export class UsersService {
     return this.usersRepository.findOneBy({ email });
   }
 
-  async update(id: number, updateUsersDto: UpdateUsersDto) {
-    return this.usersRepository.update({ id }, updateUsersDto);
+  async update(id: number, body: { name: string; email: string }) {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User not found with this id ${id}`);
+    }
+    return this.usersRepository.update({ id }, body);
   }
 
   async remove(id: number): Promise<any> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User not found with this id ${id}`);
+    }
     return this.usersRepository.delete({ id });
   }
 }

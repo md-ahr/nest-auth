@@ -13,15 +13,21 @@ export class AuthService {
 
   async login(createUsersDto: CreateUsersDto): Promise<any> {
     const user = await this.usersService.findByEmail(createUsersDto?.email);
-    if (user?.password !== createUsersDto?.password) {
-      throw new UnauthorizedException();
+    const isPasswordMatch = await bcrypt.compare(
+      createUsersDto?.password,
+      user?.password,
+    );
+    if (!isPasswordMatch) {
+      throw new UnauthorizedException('Email or password does not match');
     }
-    const payload = { sub: user.id, email: user.email };
+    const payload = { userId: user.id, name: user.name, email: user.email };
     return {
       success: true,
       message: 'User logged in successfully',
-      payload,
-      access_token: await this.jwtService.signAsync(payload),
+      payload: {
+        ...payload,
+        access_token: await this.jwtService.signAsync(payload),
+      },
     };
   }
 
@@ -30,11 +36,19 @@ export class AuthService {
       ...createUsersDto,
       password: await bcrypt.hash(createUsersDto?.password, 10),
     };
-    await this.usersService.create(user);
+    const createdUser = await this.usersService.create(user);
+    const payload = {
+      userId: createdUser.id,
+      name: createdUser.name,
+      email: createdUser.email,
+    };
     return {
       success: true,
       message: 'User registered successfully',
-      payload: { name: user?.name, email: user?.email },
+      payload: {
+        ...payload,
+        access_token: await this.jwtService.signAsync(payload),
+      },
     };
   }
 }
