@@ -1,9 +1,20 @@
-import { Body, Controller, Post, Res, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { CreateUsersDto } from 'src/users/dto/create-users.dto';
 import * as xss from 'xss';
 import { AuthService } from './auth.service';
+import { AccessTokenGuard } from './guards/access-token.guard';
+import { RefreshTokenGuard } from './guards/refreshToken.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -16,24 +27,24 @@ export class AuthController {
     @Body(new ValidationPipe())
     createUsersDto: CreateUsersDto,
   ) {
-    const { success, message, payload } =
+    const { accessToken, refreshToken } =
       await this.authService.login(createUsersDto);
+    const oneDayMs = 1 * 24 * 60 * 60 * 1000;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
     res
-      .cookie('access_token', payload.access_token, {
+      .cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: false,
         sameSite: 'lax',
-        expires: new Date(Date.now() + 1 * 24 * 60 * 1000), // 1 day
+        expires: new Date(Date.now() + oneDayMs),
       })
-      .send({
-        success,
-        message,
-        payload: {
-          userId: payload.userId,
-          name: payload.name,
-          email: payload.email,
-        },
-      });
+      .cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        expires: new Date(Date.now() + thirtyDaysMs),
+      })
+      .send({ accessToken, refreshToken });
   }
 
   @Post('register')
@@ -45,22 +56,36 @@ export class AuthController {
       ...createUsersDto,
       name: xss.escapeHtml(createUsersDto?.name),
     };
-    const { success, message, payload } = await this.authService.register(body);
+    const { accessToken, refreshToken } = await this.authService.register(body);
+    const oneDayMs = 1 * 24 * 60 * 60 * 1000;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
     res
-      .cookie('access_token', payload.access_token, {
+      .cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: false,
         sameSite: 'lax',
-        expires: new Date(Date.now() + 1 * 24 * 60 * 1000), // 1 day
+        expires: new Date(Date.now() + oneDayMs),
       })
-      .send({
-        success,
-        message,
-        payload: {
-          userId: payload.userId,
-          name: payload.name,
-          email: payload.email,
-        },
-      });
+      .cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        expires: new Date(Date.now() + thirtyDaysMs),
+      })
+      .send({ accessToken, refreshToken });
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @Get('logout')
+  logout(@Req() req: Request) {
+    this.authService.logout(req.user['sub']);
+  }
+
+  @UseGuards(RefreshTokenGuard)
+  @Get('refresh')
+  refreshTokens(@Req() req: Request) {
+    const userId = req.user['sub'];
+    const refreshToken = req.user['refreshToken'];
+    return this.authService.refreshTokens(userId, refreshToken);
   }
 }

@@ -17,4 +17,8 @@ export class Users {
 
   @Column()
   password: string;
+
+  @Column()
+  @IsOptional()
+  refreshToken: string;
 }

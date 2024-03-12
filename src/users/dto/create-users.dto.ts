@@ -24,4 +24,8 @@ export class CreateUsersDto {
       'Password must contain at least one letter, one number, and one special character.',
   })
   password: string;
+
+  @Column()
+  @IsOptional()
+  refreshToken: string;
 }

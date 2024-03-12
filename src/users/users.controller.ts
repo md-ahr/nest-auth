@@ -10,7 +10,7 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import * as xss from 'xss';
 import { CreateUsersDto } from './dto/create-users.dto';
 import { UpdateUsersDto } from './dto/update-users.dto';
@@ -25,19 +25,19 @@ export class UsersController {
     return this.usersService.create(createUsersDto);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AccessTokenGuard)
   @Get()
   findAll() {
     return this.usersService.findAll();
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AccessTokenGuard)
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findOne(id);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AccessTokenGuard)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -51,7 +51,7 @@ export class UsersController {
     return this.usersService.update(id, body);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AccessTokenGuard)
   @Patch('password/reset')
   resetPassword(@Body() oldPassword: string) {
     /**
@@ -60,7 +60,7 @@ export class UsersController {
     return `reset password ${oldPassword}`;
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AccessTokenGuard)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
